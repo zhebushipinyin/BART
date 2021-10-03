@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 
 
-def generate(n_trial=None,
+def generate(n_trial=30,
              max_pump=None,
              balloon_number=1
              ):
@@ -17,7 +17,7 @@ def generate(n_trial=None,
     ----------
     n_trial : int
         number of trials per balloon
-    max_pump : int
+    max_pump : int or np.array
         maximum number of pumps per balloon
     balloon_number : int
         number of balloons in the experiment: 1
@@ -26,18 +26,23 @@ def generate(n_trial=None,
     -------
     df : DataFrame
     """
-    if n_trial is None:
-        n_trial = 30
     if max_pump is None:
         max_pump = 128
-
     df = pd.DataFrame()
-    df['max_pump'] = [max_pump]*n_trial
-    bp = np.random.randint(1, max_pump, n_trial)
-    while abs(np.mean(bp)-max_pump/2)>=3:
-        bp = np.random.randint(1, max_pump, n_trial)
+    df['balloon'] = np.repeat(range(balloon_number), n_trial)
+    if balloon_number == 1:
+        df['max_pump'] = [max_pump]*n_trial
+        bp = np.random.randint(1, max_pump+1, n_trial)
+        while abs(np.mean(bp)-max_pump/2)>=3:
+            bp = np.random.randint(1, max_pump+1, n_trial)
+    elif len(max_pump)!=balloon_number:
+        raise ValueError('input error')
+    else:
+        df['max_pump'] = np.repeat(max_pump, n_trial)
+        bp = np.random.randint(1, np.repeat(max_pump, n_trial))
+        while abs(np.mean(bp.reshape(-1, n_trial), axis=1) - max_pump / 2).max() >= 3:
+            bp = np.random.randint(1, np.repeat(max_pump, n_trial))
     df['break_point'] = bp
-
     return df
 
 

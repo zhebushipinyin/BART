@@ -29,15 +29,22 @@ w = int(w)
 h = int(h)
 a = h/720
 results = {
-    'balloon':[], 'break_point':[], 'choice':[], 'money':[], 'total':[],
+    'balloon':[],'id':[], 'break_point':[], 'choice':[], 'money':[], 'total':[],
     'last': [], 'rt': [], 'status':[]
     }
-df = hp.generate(n_trial=30, max_pump=128)
+df = hp.generate(n_trial=30, max_pump=np.array([32, 128]), balloon_number=2)
+temp0 = np.arange(20)
+np.random.shuffle(temp0)
+temp1 = np.arange(20, 60)
+df['trial'] = np.concatenate([temp0[:10], temp1[:20], temp0[10:], temp1[20:]])
+df = df.sort_values(by=['trial'], ignore_index=True)
+df['block'] = np.repeat([1,2,3], 20)
 df['pix_w'] = w
 df['pix_h'] = h
+df.to_csv('data/trial_%s_%s.csv' % (name, time.strftime("%y-%m-%d-%H-%M")))
 
 win = visual.Window(size=(w, h), fullscr=True, units='pix', color=[0, 0, 0])
-color = np.array([34, 74, 132])*2/255 - 1
+color = [np.array([177, 64, 76])*2/255 - 1, np.array([34, 74, 132])*2/255 - 1]
 # Buttons
 button_pump = hp.Button(
     text= visual.TextStim(win, text=u'充气', height=36*a, wrapWidth=10000),
@@ -51,10 +58,15 @@ button_pump.set_pos(pos=(0, -240*a), size=(240*a, 60*a))
 button_gather.set_pos(pos=(-300*a, -240*a), size=(240*a, 60*a))
 
 # Balloon
+balloon_img = {
+    'blue':['img/balloon_blue%s.png'%x for x in range(6)],
+    'red':['img/balloon_red%s.png'%x for x in range(6)]
+}
+balloon_color=['red', 'blue']
 balloon = hp.Balloon(
     img=visual.ImageStim(win, image='img/balloon_blue0.png'),
     shape=visual.Rect(
-        win, lineColor=color, fillColor=color, lineWidth=2,
+        win, lineColor=color[0], fillColor=color[0], lineWidth=2,
         pos=(0, -240*a+30*a+30*a), size=(30*a, 60*a)),
     bottom_pos=(0, (-240+30+50)*a),
     size=720*a/6
@@ -84,7 +96,16 @@ if 'escape' in key:
 money_total = 0
 money_last = 0
 for i in range(len(df)):
+    if i in [20, 40]:
+        text.text = '休息一下，按【空格键】开始'
+        text.draw()
+        win.flip()
+        key = event.waitKeys(keyList=['space', 'escape'])
     break_point = df['break_point'][i]
+    b_i = df['balloon'][i]
+    balloon.img.image = balloon_img[balloon_color[b_i]][0]
+    balloon.shape.lineColor = color[b_i]
+    balloon.shape.fillColor = color[b_i]
     money = 0
     balloon.reset()
     button_gather.txt.text = u'收取%s分' % money
@@ -102,7 +123,8 @@ for i in range(len(df)):
         key = event.waitKeys(keyList=['f', 'j', 'escape'])
         rt = clk.getTime()
         results['rt'].append(rt)
-        results['balloon'].append(i)
+        results['id'].append(i)
+        results['balloon'].append(b_i)
         results['break_point'].append(break_point)
         results['total'].append(money_total)
         results['last'].append(money_last)
@@ -134,13 +156,13 @@ for i in range(len(df)):
                 money_last = 0
                 results['status'].append('bang')
                 for k in range(6):
-                    balloon.img.image = 'img/balloon_blue%s.png'%k
+                    balloon.img.image = balloon_img[balloon_color[b_i]][k]
                     button_pump.draw()
                     balloon.draw()
                     win.flip()
                 core.wait(0.2)
                 bang.stop()
-                balloon.img.image = 'img/balloon_blue0.png'
+                balloon.img.image = balloon_img[balloon_color[b_i]][0]
         clk.reset()
 
 data = pd.DataFrame(results)
@@ -148,7 +170,7 @@ data['name'] = name
 data['sex'] = sex
 data['age'] = age
 data['trial'] = np.arange(len(data))+1
-data.to_csv('data/%s_%s.csv' % (name, time.strftime("%y-%m-%d-%H-%M")))
+data.to_csv('data/exp_%s_%s.csv' % (name, time.strftime("%y-%m-%d-%H-%M")))
 text.text = "本实验结束，请呼叫主试"
 text.draw()
 win.flip()

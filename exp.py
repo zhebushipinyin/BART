@@ -30,7 +30,7 @@ h = int(h)
 a = h/720
 results = {
     'balloon':[],'id':[], 'break_point':[], 'choice':[], 'money':[], 'total':[],
-    'last': [], 'rt': [], 'status':[]
+    'last': [], 'rt': [], 'status':[],'t':[]
     }
 df = hp.generate(n_trial=30, max_pump=np.array([32, 128]), balloon_number=2)
 temp0 = np.arange(20)
@@ -76,25 +76,34 @@ balloon = hp.Balloon(
 text = visual.TextStim(win, height=64 * h / 720, pos=(0, 0), wrapWidth=10000)
 info_total = visual.TextStim(win, height=36*a, pos=(400*a, -120*a), wrapWidth=10000)
 info_last = visual.TextStim(win, height=36*a, pos=(400*a, -240*a), wrapWidth=10000)
-
+progress = visual.TextStim(win, height=36*a, pos=(0, -320*a), wrapWidth=10000)
 # Sound
 bang = Sound('sound/bang.wav')
 
 # 指导语
+pic = visual.ImageStim(win, size=(w, h))
+while True:
+    for i in range(2):
+        pic.image = 'img/introduction_%s.png' % i
+        pic.draw()
+        win.flip()
+        event.waitKeys(keyList=['space'])
+        event.clearEvents()
+    text.text = u"按【空格键】进入实验"
+    text.draw()
+    win.flip()
+    key = event.waitKeys(keyList=['space', 'escape'])
+    if 'space' in key:
+        event.clearEvents()
+        break
+    event.clearEvents()
 
 # 实验
-clk = core.Clock()
 myMouse = event.Mouse()
-text.text = '按【空格键】进入正式实验'
-text.draw()
-win.flip()
-key = event.waitKeys(keyList=['space', 'escape'])
-if 'escape' in key:
-    win.close()
-    core.quit()
-
+myMouse.setVisible(0)
 money_total = 0
 money_last = 0
+clk = core.Clock()
 for i in range(len(df)):
     if i in [20, 40]:
         text.text = '休息一下，按【空格键】开始'
@@ -111,15 +120,17 @@ for i in range(len(df)):
     button_gather.txt.text = u'收取%s分' % money
     info_total.text = u'已获得%s分' % money_total
     info_last.text = u'上次获得%s分' % money_last
-
+    progress.text = u'%s/60'%(i+1)
     button_pump.draw()
     button_gather.draw()
     balloon.draw()
     info_total.draw()
     info_last.draw()
+    progress.draw()
     win.flip()
     clk.reset()
     for j in range(break_point):
+        results['t'].append(time.time())
         key = event.waitKeys(keyList=['f', 'j', 'escape'])
         rt = clk.getTime()
         results['rt'].append(rt)
@@ -143,13 +154,14 @@ for i in range(len(df)):
             if j != break_point-1:
                 balloon.pump(r_change=10 * a)
                 money += 1
-                button_gather.txt.text = u'收取%s元' % money
+                button_gather.txt.text = u'收取%s分' % money
                 results['status'].append('pump')
                 button_pump.draw()
                 button_gather.draw()
                 balloon.draw()
                 info_total.draw()
                 info_last.draw()
+                progress.draw()
                 win.flip()
             else:
                 bang.play()
@@ -164,6 +176,8 @@ for i in range(len(df)):
                 bang.stop()
                 balloon.img.image = balloon_img[balloon_color[b_i]][0]
         clk.reset()
+    win.flip()
+    core.wait(0.1)
 
 data = pd.DataFrame(results)
 data['name'] = name

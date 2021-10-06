@@ -185,9 +185,10 @@ data['sex'] = sex
 data['age'] = age
 data['trial'] = np.arange(len(data))+1
 data.to_csv('data/exp_%s_%s.csv' % (name, time.strftime("%y-%m-%d-%H-%M")))
-text.text = "本实验结束，请呼叫主试"
+text.text = "本实验结束，你获得%s分" % money_total
 text.draw()
 win.flip()
 core.wait(3)
+print('总分：%s' % money_total)
 win.close()
 core.quit()
